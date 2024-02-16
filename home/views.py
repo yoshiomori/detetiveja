@@ -1,5 +1,7 @@
+import os
+
 from django import http
-from django.http import HttpResponse, FileResponse
+from django.http import HttpResponse, FileResponse, HttpResponseRedirect, HttpResponsePermanentRedirect
 from django.views import generic
 import requests
 
@@ -26,6 +28,15 @@ class FaviconView(generic.View):
         )
 
 
+class ImageView(generic.View):
+    @staticmethod
+    def get(response, filename):
+        return http.FileResponse(
+            streaming_content=open(f'home/templates/home/img/{filename}', 'rb'),
+            filename=filename
+        )
+
+
 class BingView(generic.TemplateView):
     template_name = 'home/BingSiteAuth.xml'
     content_type = 'application/xml'
@@ -39,21 +50,41 @@ class RobotsView(generic.TemplateView):
 class NextImageView(generic.View):
     @staticmethod
     def get(request):
-        response = requests.get(request.GET.get('url'))
-        return HttpResponse(response.content, content_type=response.headers['Content-Type'])
+        return HttpResponseRedirect(request.GET.get('url'))
 
 
 class NextStaticView(generic.View):
     @staticmethod
     def get(request, filename):
-        with open(f'home/templates/home/{filename}') as fo:
-            content = fo.read()
-        return HttpResponse(content, content_type='text/css; charset=UTF-8')
+        sfn = f'home/templates/home/{filename}'
+        if not os.path.exists(sfn):
+            response = requests.get(f'https://detetiveja.mydurable.com/_next/static/{filename}')
+            assert response.ok
+            with open(sfn, 'wb') as file_object:
+                file_object.write(response.content)
+        with open(sfn, encoding='utf-8') as file_object:
+            content = file_object.read()
+
+        _, ext = os.path.splitext(filename)
+        if ext == '.js':
+            content_type = 'text/javascript'
+        elif ext == '.css':
+            content_type = 'text/css'
+        else:
+            content_type = 'text/plain'
+
+        return HttpResponse(content, content_type=content_type)
 
 
 class CFFontsView(generic.View):
     @staticmethod
     def get(request, filename):
-        with open(f'home/templates/home/cf-fonts/{filename}') as fo:
-            content = fo.read()
-        return HttpResponse(content, headers=dict91)
+        with open(f'home/templates/home/cf-fonts/{filename}', 'rb') as file_object:
+            content = file_object.read()
+        headers = dict()
+        headers['Content-Disposition'] = f'attachment; filename={os.path.basename(filename)}'
+        return HttpResponse(
+            content,
+            headers=headers,
+            content_type='font/woff2'
+        )
