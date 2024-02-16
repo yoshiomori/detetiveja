@@ -13,6 +13,9 @@ class HomeView(generic.TemplateView):
 class HomeV2View(generic.TemplateView):
     template_name = 'home/home.v2.html'
 
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(text='Detetive já agradece seu contato. Em que posso ajudar?', **kwargs)
+
 
 class GoogleView(generic.TemplateView):
     template_name = 'home/googlee7c3c15be2f23589.html'
